@@ -4,7 +4,7 @@
 
 Desenvolver uma pipeline de **auditoria, validação e melhoria da qualidade de datasets de segmentação** exportados do CVAT.
 
-O sistema terá como objetivo identificar automaticamente problemas que possam comprometer a qualidade das anotações e da composição do dataset, gerar métricas de qualidade, calcular um **Dataset Health Score** e disponibilizar mecanismos de correção assistida ou automática.
+O sistema terá como objetivo identificar automaticamente problemas que possam comprometer a qualidade das anotações e da composição do dataset, gerar métricas de qualidade, produzir relatórios e disponibilizar mecanismos de correção assistida ou automática.
 
 A ferramenta busca reduzir erros de anotação, padronizar processos de Quality Assurance (QA), diminuir retrabalho e aumentar a confiabilidade dos datasets utilizados em projetos de Visão Computacional.
 
@@ -29,7 +29,7 @@ Datasets de segmentação podem apresentar problemas como:
 
 Em datasets grandes, identificar esses problemas manualmente pode consumir muito tempo e estar sujeito a falhas humanas.
 
-Este projeto propõe uma pipeline automatizada para **Quality Assurance (QA)** de datasets de segmentação, capaz de analisar os dados, identificar problemas, gerar indicadores de qualidade e, posteriormente, auxiliar na correção dos casos encontrados.
+Este projeto propõe uma pipeline automatizada para **Quality Assurance (QA)** de datasets de segmentação, capaz de analisar os dados, identificar problemas, gerar indicadores e relatórios e, posteriormente, auxiliar na correção dos casos encontrados.
 
 \---
 
@@ -49,7 +49,6 @@ Desenvolver uma ferramenta capaz de analisar automaticamente datasets de segment
 * detectar possíveis duplicidades;
 * identificar outliers nas máscaras e anotações;
 * calcular métricas de qualidade;
-* criar um indicador global de qualidade do dataset;
 * gerar relatórios automatizados;
 * disponibilizar uma interface visual para análise dos resultados;
 * implementar mecanismos de correção assistida ou automática;
@@ -68,9 +67,9 @@ Além da identificação dos problemas, o projeto permitirá investigar experime
 
 # Visão Geral
 
-O projeto será desenvolvido de forma incremental ao longo do período de estágio.
+O projeto será desenvolvido de forma incremental ao longo do período de estágio, com entregas parciais até a versão completa da solução.
 
-A primeira grande entrega será um **MVP funcional focado em auditoria e análise de qualidade**. A partir dele, novas camadas serão adicionadas até alcançar a versão completa da ferramenta.
+A primeira grande entrega será um **MVP funcional focado em auditoria e análise de qualidade**. A partir dele, novas funcionalidades serão adicionadas progressivamente.
 
 Fluxo geral:
 
@@ -87,15 +86,15 @@ Audit Results
      ↓
 Quality Metrics
      ↓
-Dataset Health Score
-     ↓
 Quality Report
      ↓
 Dashboard
      ↓
 Correction Engine
      ↓
-Smart Audit / Experimental Analysis
+Smart Audit
+     ↓
+Experimental Analysis
 ```
 
 \---
@@ -184,7 +183,7 @@ Annotation
  └── bounding\_box
 ```
 
-Essa camada permite que diferentes formatos de entrada sejam analisados por uma mesma engine.
+Essa camada permitirá que diferentes formatos de entrada sejam analisados pela mesma engine.
 
 \---
 
@@ -212,7 +211,7 @@ auditors/
 
 Cada auditor deverá seguir uma interface comum e gerar resultados estruturados.
 
-Exemplo:
+Exemplo conceitual:
 
 ```python
 AuditResult(
@@ -442,18 +441,11 @@ Pear        7.6%
 
 \---
 
-## Class Balance Score
+## Class Balance
 
 Indicador destinado a representar o grau de equilíbrio da distribuição das classes.
 
-Faixa proposta:
-
-```text
-0 → maior desequilíbrio
-1 → maior equilíbrio
-```
-
-A fórmula será definida, documentada e validada durante a implementação.
+A métrica e sua fórmula serão definidas, documentadas e validadas durante a implementação.
 
 \---
 
@@ -503,41 +495,7 @@ Imagens duplicadas / Imagens totais
 
 \---
 
-# 6\. Dataset Health Score
-
-## Objetivo
-
-Criar um indicador interno que agregue diferentes métricas de auditoria em uma escala de fácil interpretação.
-
-O Health Score será um **indicador definido pelo projeto com base nas auditorias implementadas**, e seus componentes e pesos deverão ser documentados.
-
-### Estrutura inicial
-
-```text
-Completeness          25 pontos
-Geometry              25 pontos
-Annotation Quality    25 pontos
-Class Distribution    25 pontos
-
-Total                 100 pontos
-```
-
-Exemplo:
-
-```text
-Completeness:         23/25
-Geometry:             24/25
-Annotation Quality:   21/25
-Class Distribution:   19/25
-
-Health Score:         87/100
-```
-
-A fórmula e os pesos poderão ser refinados conforme os resultados dos experimentos e a validação com datasets reais.
-
-\---
-
-# 7\. Quality Report
+# 6\. Quality Report
 
 ## Objetivo
 
@@ -567,7 +525,13 @@ Invalid polygons:       7
 Duplicate images:       4
 Small masks:            83
 
-Health Score:           87/100
+Class Distribution
+────────────────────────────────
+
+Tomato     41.2%
+Potato     32.8%
+Radish     18.4%
+Pear        7.6%
 
 Warnings:
 - 12 imagens sem anotação
@@ -584,7 +548,7 @@ Recommendations:
 
 \---
 
-# 8\. Dashboard
+# 7\. Dashboard
 
 ## Objetivo
 
@@ -598,7 +562,6 @@ Disponibilizar uma interface visual para exploração dos resultados da auditori
 
 ### Recursos
 
-* Dataset Health Score;
 * estatísticas gerais;
 * distribuição de classes;
 * quantidade de problemas por categoria;
@@ -611,7 +574,7 @@ Disponibilizar uma interface visual para exploração dos resultados da auditori
 
 \---
 
-# 9\. Correction Engine
+# 8\. Correction Engine
 
 ## Objetivo
 
@@ -665,7 +628,7 @@ As correções deverão manter rastreabilidade das alterações realizadas.
 
 \---
 
-# 10\. Smart Audit
+# 9\. Smart Audit
 
 ## Objetivo
 
@@ -682,11 +645,9 @@ Possibilidades:
 * sugestão de inconsistências;
 * sugestão de possíveis correções.
 
-Essa etapa fará parte do desenvolvimento completo da solução após a consolidação das etapas anteriores.
-
 \---
 
-# 11\. Avaliação Experimental
+# 10\. Avaliação Experimental
 
 Uma etapa importante do projeto será avaliar a pipeline em datasets reais.
 
@@ -725,7 +686,7 @@ A relação entre qualidade dos dados e desempenho do modelo será tratada como 
 
 \---
 
-# 12\. MVP
+# 11\. MVP
 
 A primeira grande entrega do projeto será um **MVP funcional da pipeline de auditoria**.
 
@@ -739,8 +700,6 @@ Parser
 Auditors
    ↓
 Metrics
-   ↓
-Health Score
    ↓
 Quality Report
 ```
@@ -758,7 +717,6 @@ Quality Report
 * Duplicate Images Auditor;
 * estrutura padronizada de `AuditResult`;
 * métricas básicas;
-* Health Score inicial;
 * geração de relatório;
 * testes automatizados.
 
@@ -791,11 +749,6 @@ potato       32.8%
 radish       18.4%
 pear          7.6%
 
-Health Score
-────────────────────────────────
-
-87/100
-
 Warnings:
 - 12 imagens sem anotação
 - 7 polígonos inválidos
@@ -805,7 +758,7 @@ Warnings:
 
 \---
 
-# 13\. Critérios de Sucesso do MVP
+# 12\. Critérios de Sucesso do MVP
 
 O MVP será considerado concluído quando for capaz de:
 
@@ -817,14 +770,13 @@ O MVP será considerado concluído quando for capaz de:
 * identificar problemas de qualidade;
 * calcular métricas básicas;
 * gerar um relatório;
-* produzir um Health Score inicial;
 * possuir testes automatizados para os principais componentes.
 
 \---
 
-# 14\. Roadmap
+# 13\. Roadmap
 
-O projeto será desenvolvido ao longo do período de estágio, com entregas incrementais.
+O projeto será desenvolvido ao longo do período de estágio, com entregas parciais e incrementais até a conclusão da solução completa.
 
 ## Etapa 1 — Fundamentos e Arquitetura
 
@@ -850,7 +802,6 @@ O projeto será desenvolvido ao longo do período de estágio, com entregas incr
 * \[ ] Duplicate Images Auditor;
 * \[ ] estrutura padronizada de `AuditResult`;
 * \[ ] métricas iniciais;
-* \[ ] Health Score;
 * \[ ] geração de relatório;
 * \[ ] testes automatizados.
 
@@ -865,8 +816,7 @@ O projeto será desenvolvido ao longo do período de estágio, com entregas incr
 * \[ ] Mask Area Distribution;
 * \[ ] Mask Coverage;
 * \[ ] Polygon Complexity;
-* \[ ] melhorias no Health Score;
-* \[ ] tratamento de diferentes tipos de severidade.
+* \[ ] tratamento de diferentes níveis de severidade.
 
 \---
 
@@ -919,7 +869,7 @@ O projeto será desenvolvido ao longo do período de estágio, com entregas incr
 
 \---
 
-# 15\. Estrutura Inicial do Projeto
+# 14\. Estrutura Inicial do Projeto
 
 ```text
 quality-pipeline/
@@ -955,7 +905,7 @@ quality-pipeline/
 │       │   ├── completeness.py
 │       │   ├── class\_balance.py
 │       │   ├── mask\_coverage.py
-│       │   └── health\_score.py
+│       │   └── duplicate\_rate.py
 │       │
 │       ├── reports/
 │       │   ├── json\_report.py
@@ -983,7 +933,7 @@ quality-pipeline/
 
 \---
 
-# 16\. Tecnologias
+# 15\. Tecnologias
 
 ## Backend
 
@@ -1013,7 +963,7 @@ quality-pipeline/
 
 \---
 
-# 17\. Resultados Esperados
+# 16\. Resultados Esperados
 
 Ao final do projeto, espera-se obter:
 
@@ -1021,7 +971,6 @@ Ao final do projeto, espera-se obter:
 * validação automatizada de datasets de segmentação;
 * métricas quantitativas de qualidade;
 * relatórios padronizados;
-* um Dataset Health Score;
 * dashboard para análise dos resultados;
 * mecanismos de correção assistida e automática;
 * capacidade de comparar versões de datasets;
@@ -1031,7 +980,7 @@ Ao final do projeto, espera-se obter:
 
 \---
 
-# 18\. Visão de Longo Prazo
+# 17\. Visão de Longo Prazo
 
 A visão do projeto é transformar a ferramenta em uma solução interna de **Quality Assurance para datasets de Visão Computacional**, capaz de:
 
