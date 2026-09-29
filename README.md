@@ -8,7 +8,7 @@ O sistema terá como objetivo identificar automaticamente problemas que possam c
 
 A ferramenta busca reduzir erros de anotação, padronizar processos de Quality Assurance (QA), diminuir retrabalho e aumentar a confiabilidade dos datasets utilizados em projetos de Visão Computacional.
 
-\---
+---
 
 # Problema
 
@@ -16,46 +16,46 @@ Em projetos de Visão Computacional, a qualidade dos dados utilizados no treinam
 
 Datasets de segmentação podem apresentar problemas como:
 
-* imagens sem anotação;
-* labels vazias;
-* classes desbalanceadas;
-* polígonos inválidos;
-* máscaras muito pequenas ou muito grandes;
-* imagens duplicadas;
-* anotações duplicadas;
-* classes cadastradas sem instâncias;
-* inconsistências na distribuição das anotações;
-* estruturas de dataset incompletas ou inválidas.
+- imagens sem anotação;
+- labels ou registros de anotação vazios;
+- classes desbalanceadas;
+- polígonos inválidos;
+- máscaras muito pequenas ou muito grandes;
+- imagens duplicadas;
+- anotações duplicadas;
+- classes cadastradas sem instâncias;
+- inconsistências na distribuição das anotações;
+- estruturas de dataset incompletas ou inválidas.
 
 Em datasets grandes, identificar esses problemas manualmente pode consumir muito tempo e estar sujeito a falhas humanas.
 
-Este projeto propõe uma pipeline automatizada para **Quality Assurance (QA)** de datasets de segmentação, capaz de analisar os dados, identificar problemas, gerar indicadores e relatórios e, posteriormente, auxiliar na correção dos casos encontrados.
+Este projeto propõe uma pipeline automatizada para **Quality Assurance (QA)** de datasets de segmentação, capaz de analisar os dados, identificar problemas, gerar métricas e relatórios e, posteriormente, auxiliar na correção dos casos encontrados.
 
-\---
+---
 
 # Objetivo Geral
 
 Desenvolver uma ferramenta capaz de analisar automaticamente datasets de segmentação, identificar problemas de qualidade, gerar métricas e relatórios e auxiliar no processo de revisão e melhoria dos dados antes de sua utilização no treinamento de modelos de Visão Computacional.
 
-\---
+---
 
 # Objetivos Específicos
 
-* validar a estrutura dos datasets;
-* calcular estatísticas dos dados;
-* identificar problemas de completude;
-* validar anotações geométricas;
-* analisar a distribuição das classes;
-* detectar possíveis duplicidades;
-* identificar outliers nas máscaras e anotações;
-* calcular métricas de qualidade;
-* gerar relatórios automatizados;
-* disponibilizar uma interface visual para análise dos resultados;
-* implementar mecanismos de correção assistida ou automática;
-* permitir comparação entre diferentes versões de datasets;
-* investigar experimentalmente a relação entre qualidade do dataset e desempenho dos modelos treinados.
+- validar a estrutura dos datasets;
+- calcular estatísticas dos dados;
+- identificar problemas de completude;
+- validar anotações geométricas;
+- analisar a distribuição das classes;
+- detectar possíveis duplicidades;
+- identificar outliers nas máscaras e anotações;
+- calcular métricas de qualidade;
+- gerar relatórios automatizados;
+- disponibilizar uma interface visual para análise dos resultados;
+- implementar mecanismos de correção assistida ou automática;
+- permitir comparação entre diferentes versões de datasets;
+- investigar experimentalmente a relação entre qualidade do dataset e desempenho dos modelos treinados.
 
-\---
+---
 
 # Hipótese / Motivação
 
@@ -63,20 +63,24 @@ Uma pipeline automatizada de auditoria pode tornar o processo de validação de 
 
 Além da identificação dos problemas, o projeto permitirá investigar experimentalmente se melhorias mensuráveis na qualidade dos datasets estão associadas a alterações no desempenho dos modelos treinados.
 
-\---
+---
 
 # Visão Geral
 
 O projeto será desenvolvido de forma incremental ao longo do período de estágio, com entregas parciais até a versão completa da solução.
 
-A primeira grande entrega será um **MVP funcional focado em auditoria e análise de qualidade**. A partir dele, novas funcionalidades serão adicionadas progressivamente.
+A primeira grande entrega será um **MVP funcional focado em auditoria e análise de qualidade**, utilizando **COCO Segmentation como formato principal de entrada**.
+
+A partir do MVP, novas funcionalidades serão adicionadas progressivamente.
 
 Fluxo geral:
 
 ```text
 CVAT Export
      ↓
-Dataset Parser
+COCO Dataset
+     ↓
+COCO Parser
      ↓
 Dataset Model
      ↓
@@ -97,19 +101,65 @@ Smart Audit
 Experimental Analysis
 ```
 
-\---
+---
 
 # Arquitetura
 
-## 1\. Dataset Parser
+## 1. Dataset Parser
 
 ### Objetivo
 
 Ler datasets exportados do CVAT e convertê-los para estruturas internas padronizadas.
 
-### Formatos previstos
+### Formato principal do MVP
 
-### YOLO Segmentation
+## COCO Segmentation
+
+O formato COCO será utilizado como **principal formato de entrada do MVP**, por ser o formato utilizado no fluxo de exportação e treinamento do ambiente de desenvolvimento.
+
+Estrutura esperada:
+
+```text
+dataset/
+├── images/
+│   ├── image_001.jpg
+│   ├── image_002.jpg
+│   └── ...
+│
+└── annotations.json
+```
+
+O parser deverá interpretar principalmente as estruturas:
+
+```text
+images
+annotations
+categories
+```
+
+e relacionar as informações necessárias para auditoria de imagens, classes e segmentações.
+
+Exemplo conceitual:
+
+```text
+images
+   ↓
+image_id
+   ↓
+annotations
+   ↓
+category_id
+   ↓
+categories
+```
+
+### Formato adicional
+
+## YOLO Segmentation
+
+O suporte a YOLO Segmentation será implementado posteriormente, utilizando a mesma representação interna adotada pelos auditores.
+
+Estrutura esperada:
 
 ```text
 dataset/
@@ -118,27 +168,21 @@ dataset/
 └── data.yaml
 ```
 
-### COCO
-
-```text
-dataset/
-├── images/
-└── annotations.json
-```
-
 ### Responsabilidades
 
-* carregar datasets;
-* validar a estrutura de diretórios;
-* validar arquivos obrigatórios;
-* indexar imagens;
-* indexar anotações;
-* associar imagens e anotações;
-* normalizar informações para um formato interno comum.
+- carregar datasets;
+- validar a estrutura de diretórios;
+- validar arquivos obrigatórios;
+- indexar imagens;
+- indexar anotações;
+- associar imagens e anotações;
+- interpretar categorias e classes;
+- normalizar informações para um formato interno comum;
+- tratar diferentes representações de segmentação suportadas pelo formato de entrada.
 
-\---
+---
 
-# 2\. Dataset Model
+# 2. Dataset Model
 
 Depois do parsing, os dados serão representados em estruturas padronizadas para que os diferentes componentes da pipeline não dependam diretamente do formato de origem.
 
@@ -167,6 +211,7 @@ Cada imagem poderá possuir:
 
 ```text
 Image
+ ├── id
  ├── width
  ├── height
  ├── path
@@ -177,17 +222,20 @@ E cada anotação:
 
 ```text
 Annotation
- ├── class\_id
- ├── polygon
+ ├── id
+ ├── image_id
+ ├── class_id
+ ├── segmentation
  ├── mask
- └── bounding\_box
+ ├── bounding_box
+ └── area
 ```
 
-Essa camada permitirá que diferentes formatos de entrada sejam analisados pela mesma engine.
+Essa camada permitirá que diferentes formatos de entrada sejam analisados pela mesma Audit Engine.
 
-\---
+---
 
-# 3\. Audit Engine
+# 3. Audit Engine
 
 ## Objetivo
 
@@ -199,14 +247,15 @@ Estrutura proposta:
 
 ```text
 auditors/
-├── dataset\_statistics.py
-├── missing\_annotations.py
-├── class\_balance.py
-├── polygon\_validator.py
-├── small\_masks.py
-├── large\_masks.py
-├── duplicate\_images.py
-└── duplicate\_annotations.py
+├── dataset_statistics.py
+├── missing_annotations.py
+├── class_balance.py
+├── polygon_validator.py
+├── small_masks.py
+├── large_masks.py
+├── duplicate_images.py
+├── duplicate_annotations.py
+└── annotation_consistency.py
 ```
 
 Cada auditor deverá seguir uma interface comum e gerar resultados estruturados.
@@ -216,49 +265,73 @@ Exemplo conceitual:
 ```python
 AuditResult(
     severity="warning",
-    category="small\_mask",
+    category="small_mask",
     message="83 máscaras abaixo do limite definido"
 )
 ```
 
-\---
+Os resultados deverão, sempre que possível, conter informações como:
 
-# 4\. Auditorias
+```text
+severity
+category
+message
+image_id
+annotation_id
+class_id
+metrics
+metadata
+```
+
+Isso permitirá rastrear exatamente onde o problema foi encontrado.
+
+---
+
+# 4. Auditorias
 
 ## 4.1 Dataset Statistics
 
 Calcular:
 
-* número total de imagens;
-* número total de classes;
-* número total de instâncias;
-* instâncias por classe;
-* instâncias por imagem;
-* distribuição das anotações.
+- número total de imagens;
+- número total de classes;
+- número total de instâncias;
+- instâncias por classe;
+- instâncias por imagem;
+- distribuição das anotações;
+- dimensões das imagens;
+- quantidade de imagens por classe.
 
-\---
+Exemplo:
+
+```text
+Images:        5200
+Annotations:   18432
+Classes:           8
+```
+
+---
 
 ## 4.2 Missing Annotations
 
 Detectar:
 
-* imagens sem anotação;
-* labels inexistentes;
-* labels vazias;
-* imagens sem instâncias;
-* classes cadastradas sem instâncias.
+- imagens sem anotação;
+- referências para imagens inexistentes;
+- anotações associadas a imagens inexistentes;
+- registros de anotação incompletos;
+- classes cadastradas sem instâncias;
+- imagens sem instâncias após a validação das anotações.
 
 Exemplo:
 
 ```text
-Images: 5200
-
 Images without annotations: 12
-Empty labels: 7
-Classes without instances: 1
+Invalid image references:    3
+Classes without instances:   1
 ```
 
-\---
+---
 
 ## 4.3 Class Distribution
 
@@ -274,30 +347,35 @@ Radish     7%
 
 O sistema deverá identificar classes potencialmente sub-representadas ou excessivamente dominantes de acordo com critérios configuráveis.
 
-\---
+A análise deverá considerar o número de instâncias por classe e poderá futuramente incorporar outras características da distribuição.
 
-## 4.4 Polygon Validation
+---
 
-Validar a geometria das anotações.
+## 4.4 Polygon / Segmentation Validation
 
-Detectar:
+Validar a geometria das anotações de segmentação.
 
-* polígonos inválidos;
-* self-intersections;
-* polígonos degenerados;
-* coordenadas fora dos limites da imagem;
-* número insuficiente de vértices;
-* estruturas geométricas inconsistentes.
+Detectar, quando aplicável:
+
+- polígonos inválidos;
+- self-intersections;
+- polígonos degenerados;
+- coordenadas fora dos limites da imagem;
+- número insuficiente de vértices;
+- áreas inválidas ou inconsistentes;
+- estruturas de segmentação malformadas.
+
+Como o formato COCO pode representar segmentações por diferentes estruturas, o auditor deverá tratar adequadamente cada representação suportada.
 
 Exemplo:
 
 ```text
-Invalid polygons: 7
-Out-of-bounds polygons: 3
-Degenerate polygons: 2
+Invalid segmentations:      7
+Out-of-bounds coordinates:  3
+Degenerate masks:           2
 ```
 
-\---
+---
 
 ## 4.5 Small Masks
 
@@ -305,15 +383,15 @@ Identificar máscaras com áreas muito pequenas em relação à imagem ou aos cr
 
 Possíveis causas:
 
-* erro de anotação;
-* objeto parcialmente visível;
-* anotação incompleta;
-* ruído;
-* segmentação excessivamente fragmentada.
+- erro de anotação;
+- objeto parcialmente visível;
+- anotação incompleta;
+- ruído;
+- segmentação excessivamente fragmentada.
 
 O objetivo inicial é **sinalizar casos suspeitos para revisão**, sem assumir automaticamente que são erros.
 
-\---
+---
 
 ## 4.6 Large Masks
 
@@ -321,13 +399,13 @@ Identificar máscaras que ocupem uma porcentagem excessivamente grande da imagem
 
 Possíveis causas:
 
-* seleção incorreta;
-* inclusão de regiões de fundo;
-* anotação excessivamente abrangente.
+- seleção incorreta;
+- inclusão de regiões de fundo;
+- anotação excessivamente abrangente.
 
 Os casos encontrados deverão ser sinalizados para revisão.
 
-\---
+---
 
 ## 4.7 Duplicate Images
 
@@ -352,13 +430,13 @@ O sistema deverá diferenciar, quando possível, entre:
 Duplicata exata
 ```
 
-e
+e:
 
 ```text
 Possível duplicata / imagem muito semelhante
 ```
 
-\---
+---
 
 ## 4.8 Duplicate Annotations
 
@@ -380,7 +458,7 @@ pode ser utilizado como critério inicial para sinalizar possíveis duplicidades
 
 O limiar deverá ser configurável e validado experimentalmente.
 
-\---
+---
 
 ## 4.9 Annotation Consistency
 
@@ -398,9 +476,18 @@ Tomato atual:
 
 O caso pode ser sinalizado como possível inconsistência para revisão.
 
-\---
+Outras características que poderão ser analisadas:
 
-# 5\. Métricas de Qualidade
+- área;
+- bounding box;
+- proporção entre largura e altura;
+- quantidade de vértices;
+- cobertura da imagem;
+- distribuição espacial.
+
+---
+
+# 5. Métricas de Qualidade
 
 A pipeline deverá produzir métricas que representem diferentes dimensões do dataset.
 
@@ -413,7 +500,7 @@ Dataset Coverage =
 Imagens anotadas / Imagens totais
 ```
 
-\---
+---
 
 ## Annotation Density
 
@@ -424,7 +511,7 @@ Annotation Density =
 Total de instâncias / Total de imagens
 ```
 
-\---
+---
 
 ## Class Distribution
 
@@ -439,7 +526,7 @@ Radish     18.4%
 Pear        7.6%
 ```
 
-\---
+---
 
 ## Class Balance
 
@@ -447,7 +534,7 @@ Indicador destinado a representar o grau de equilíbrio da distribuição das cl
 
 A métrica e sua fórmula serão definidas, documentadas e validadas durante a implementação.
 
-\---
+---
 
 ## Mask Coverage
 
@@ -455,22 +542,22 @@ Percentual da imagem ocupado por uma máscara.
 
 Pode ser utilizado para identificar:
 
-* máscaras muito pequenas;
-* máscaras muito grandes;
-* possíveis outliers.
+- máscaras muito pequenas;
+- máscaras muito grandes;
+- possíveis outliers.
 
-\---
+---
 
 ## Mask Area Distribution
 
 Analisa a distribuição das áreas das máscaras e permite identificar:
 
-* outliers;
-* valores extremos;
-* possíveis inconsistências;
-* padrões incomuns.
+- outliers;
+- valores extremos;
+- possíveis inconsistências;
+- padrões incomuns.
 
-\---
+---
 
 ## Polygon Complexity
 
@@ -478,11 +565,11 @@ Mede características geométricas das anotações, como quantidade de vértices
 
 Pode ajudar a identificar:
 
-* polígonos excessivamente complexos;
-* polígonos excessivamente simplificados;
-* outliers geométricos.
+- polígonos excessivamente complexos;
+- polígonos excessivamente simplificados;
+- outliers geométricos.
 
-\---
+---
 
 ## Duplicate Rate
 
@@ -493,9 +580,9 @@ Duplicate Rate =
 Imagens duplicadas / Imagens totais
 ```
 
-\---
+---
 
-# 6\. Quality Report
+# 6. Quality Report
 
 ## Objetivo
 
@@ -520,9 +607,9 @@ Images:             5200
 Annotations:       18432
 Classes:               8
 
-Missing annotations:   12
-Invalid polygons:       7
-Duplicate images:       4
+Missing annotations:    12
+Invalid segmentations:   7
+Duplicate images:        4
 Small masks:            83
 
 Class Distribution
@@ -535,20 +622,20 @@ Pear        7.6%
 
 Warnings:
 - 12 imagens sem anotação
-- 7 polígonos inválidos
+- 7 segmentações inválidas
 - 4 imagens potencialmente duplicadas
 - classe radish sub-representada
 
 Recommendations:
 - revisar imagens sem anotação
-- revisar polígonos inválidos
+- revisar segmentações inválidas
 - analisar imagens potencialmente duplicadas
 - revisar distribuição da classe radish
 ```
 
-\---
+---
 
-# 7\. Dashboard
+# 7. Dashboard
 
 ## Objetivo
 
@@ -556,25 +643,26 @@ Disponibilizar uma interface visual para exploração dos resultados da auditori
 
 ### Tecnologias
 
-* Streamlit
-* Plotly
-* Pandas
+- Streamlit
+- Plotly
+- Pandas
 
 ### Recursos
 
-* estatísticas gerais;
-* distribuição de classes;
-* quantidade de problemas por categoria;
-* filtros por classe;
-* visualização de métricas;
-* identificação de exemplos problemáticos;
-* comparação entre auditorias;
-* histórico de análises;
-* comparação entre versões de datasets.
+- estatísticas gerais;
+- distribuição de classes;
+- quantidade de problemas por categoria;
+- filtros por classe;
+- visualização de métricas;
+- identificação de exemplos problemáticos;
+- comparação entre auditorias;
+- histórico de análises;
+- comparação entre versões de datasets;
+- visualização das imagens e anotações sinalizadas.
 
-\---
+---
 
-# 8\. Correction Engine
+# 8. Correction Engine
 
 ## Objetivo
 
@@ -609,7 +697,7 @@ Validação
 
 Deseja mover para revisão?
 
-\[Sim] \[Não]
+[Sim] [Não]
 ```
 
 Ou:
@@ -621,14 +709,14 @@ apple → pear
 
 Confirma alteração?
 
-\[Sim] \[Não]
+[Sim] [Não]
 ```
 
 As correções deverão manter rastreabilidade das alterações realizadas.
 
-\---
+---
 
-# 9\. Smart Audit
+# 9. Smart Audit
 
 ## Objetivo
 
@@ -636,18 +724,20 @@ Expandir a capacidade de auditoria utilizando técnicas de Visão Computacional 
 
 Possibilidades:
 
-* integração com modelos de detecção;
-* identificação de objetos potencialmente não anotados;
-* detecção de anomalias;
-* comparação semântica entre imagens;
-* embeddings;
-* busca por similaridade;
-* sugestão de inconsistências;
-* sugestão de possíveis correções.
+- integração com modelos de detecção;
+- identificação de objetos potencialmente não anotados;
+- detecção de anomalias;
+- comparação semântica entre imagens;
+- embeddings;
+- busca por similaridade;
+- sugestão de inconsistências;
+- sugestão de possíveis correções.
 
-\---
+Os métodos utilizados deverão ser avaliados de acordo com sua precisão e utilidade no contexto real dos datasets.
 
-# 10\. Avaliação Experimental
+---
+
+# 10. Avaliação Experimental
 
 Uma etapa importante do projeto será avaliar a pipeline em datasets reais.
 
@@ -684,41 +774,55 @@ Recall
 
 A relação entre qualidade dos dados e desempenho do modelo será tratada como uma questão experimental, permitindo comparar versões do dataset sob condições controladas.
 
-\---
+---
 
-# 11\. MVP
+# 11. MVP
 
-A primeira grande entrega do projeto será um **MVP funcional da pipeline de auditoria**.
+A primeira grande entrega do projeto será um **MVP funcional da pipeline de auditoria**, focado em datasets de segmentação no formato **COCO** exportados do CVAT.
 
 O MVP terá como foco principal:
 
 ```text
-Dataset
-   ↓
-Parser
-   ↓
+COCO Dataset
+      ↓
+COCO Parser
+      ↓
+Dataset Model
+      ↓
 Auditors
-   ↓
+      ↓
 Metrics
-   ↓
+      ↓
 Quality Report
+```
+
+### Estrutura de entrada do MVP
+
+```text
+dataset/
+├── images/
+│   ├── image_001.jpg
+│   ├── image_002.jpg
+│   └── ...
+│
+└── annotations.json
 ```
 
 ### Escopo inicial
 
-* suporte inicial a YOLO Segmentation;
-* Dataset Parser;
-* Dataset Statistics;
-* Missing Annotations Auditor;
-* Class Distribution Auditor;
-* Polygon Validator;
-* Small Masks Auditor;
-* Large Masks Auditor;
-* Duplicate Images Auditor;
-* estrutura padronizada de `AuditResult`;
-* métricas básicas;
-* geração de relatório;
-* testes automatizados.
+- suporte a COCO Segmentation;
+- COCO Parser;
+- Dataset Statistics;
+- Missing Annotations Auditor;
+- Class Distribution Auditor;
+- Polygon / Segmentation Validator;
+- Small Masks Auditor;
+- Large Masks Auditor;
+- Duplicate Images Auditor;
+- estrutura padronizada de `AuditResult`;
+- métricas básicas;
+- geração de relatório;
+- testes automatizados.
 
 ### Exemplo de execução
 
@@ -737,7 +841,7 @@ Annotations:       18432
 Classes:               8
 
 Missing annotations:   12
-Invalid polygons:        7
+Invalid segmentations: 7
 Duplicate images:        4
 Small masks:            83
 
@@ -751,125 +855,141 @@ pear          7.6%
 
 Warnings:
 - 12 imagens sem anotação
-- 7 polígonos inválidos
+- 7 segmentações inválidas
 - 4 imagens potencialmente duplicadas
 - 83 máscaras pequenas
 ```
 
-\---
+---
 
-# 12\. Critérios de Sucesso do MVP
+# 12. Critérios de Sucesso do MVP
 
 O MVP será considerado concluído quando for capaz de:
 
-* carregar um dataset de segmentação em formato suportado;
-* validar sua estrutura básica;
-* indexar imagens e anotações;
-* executar múltiplos auditores;
-* gerar resultados estruturados;
-* identificar problemas de qualidade;
-* calcular métricas básicas;
-* gerar um relatório;
-* possuir testes automatizados para os principais componentes.
+- carregar um dataset COCO de segmentação;
+- validar sua estrutura básica;
+- interpretar `images`, `annotations` e `categories`;
+- indexar imagens e anotações;
+- associar corretamente imagens, classes e segmentações;
+- executar múltiplos auditores;
+- gerar resultados estruturados;
+- identificar problemas de qualidade;
+- calcular métricas básicas;
+- gerar um relatório;
+- possuir testes automatizados para os principais componentes.
 
-\---
+---
 
-# 13\. Roadmap
+# 13. Roadmap
 
 O projeto será desenvolvido ao longo do período de estágio, com entregas parciais e incrementais até a conclusão da solução completa.
 
 ## Etapa 1 — Fundamentos e Arquitetura
 
-* \[ ] estrutura inicial do projeto;
-* \[ ] definição da arquitetura;
-* \[ ] modelagem dos dados;
-* \[ ] estudo da estrutura dos exports do CVAT;
-* \[ ] suporte inicial ao formato YOLO Segmentation;
-* \[ ] definição das interfaces dos auditores;
-* \[ ] configuração dos testes.
+- [ ] estrutura inicial do projeto;
+- [ ] definição da arquitetura;
+- [ ] modelagem dos dados;
+- [ ] estudo da estrutura dos exports do CVAT;
+- [ ] estudo detalhado do formato COCO;
+- [ ] implementação inicial do COCO Parser;
+- [ ] definição das interfaces dos auditores;
+- [ ] configuração dos testes.
 
-\---
+---
 
 ## Etapa 2 — MVP
 
-* \[ ] Dataset Parser;
-* \[ ] Dataset Statistics;
-* \[ ] Missing Annotations Auditor;
-* \[ ] Class Distribution Auditor;
-* \[ ] Polygon Validator;
-* \[ ] Small Masks Auditor;
-* \[ ] Large Masks Auditor;
-* \[ ] Duplicate Images Auditor;
-* \[ ] estrutura padronizada de `AuditResult`;
-* \[ ] métricas iniciais;
-* \[ ] geração de relatório;
-* \[ ] testes automatizados.
+- [ ] COCO Parser;
+- [ ] Dataset Model;
+- [ ] Dataset Statistics;
+- [ ] Missing Annotations Auditor;
+- [ ] Class Distribution Auditor;
+- [ ] Polygon / Segmentation Validator;
+- [ ] Small Masks Auditor;
+- [ ] Large Masks Auditor;
+- [ ] Duplicate Images Auditor;
+- [ ] estrutura padronizada de `AuditResult`;
+- [ ] métricas iniciais;
+- [ ] geração de relatório;
+- [ ] testes automatizados.
 
-\---
+---
 
 ## Etapa 3 — Expansão da Auditoria
 
-* \[ ] suporte a COCO;
-* \[ ] Duplicate Annotations;
-* \[ ] Annotation Consistency;
-* \[ ] métricas avançadas;
-* \[ ] Mask Area Distribution;
-* \[ ] Mask Coverage;
-* \[ ] Polygon Complexity;
-* \[ ] tratamento de diferentes níveis de severidade.
+- [ ] Duplicate Annotations;
+- [ ] Annotation Consistency;
+- [ ] métricas avançadas;
+- [ ] Mask Area Distribution;
+- [ ] Mask Coverage;
+- [ ] Polygon Complexity;
+- [ ] tratamento de diferentes níveis de severidade;
+- [ ] melhorias no tratamento de casos extremos;
+- [ ] validação com datasets reais de diferentes características.
 
-\---
+---
 
-## Etapa 4 — Dashboard
+## Etapa 4 — Suporte a YOLO
 
-* \[ ] Streamlit Dashboard;
-* \[ ] gráficos interativos;
-* \[ ] filtros por classe;
-* \[ ] visualização dos problemas;
-* \[ ] histórico de auditorias;
-* \[ ] comparação entre datasets;
-* \[ ] comparação entre versões do mesmo dataset.
+- [ ] implementação do YOLO Parser;
+- [ ] conversão para o Dataset Model comum;
+- [ ] validação cruzada entre formatos;
+- [ ] testes específicos do formato YOLO;
+- [ ] execução dos mesmos auditores em COCO e YOLO.
 
-\---
+---
 
-## Etapa 5 — Correction Engine
+## Etapa 5 — Dashboard
 
-* \[ ] identificação de correções de baixo risco;
-* \[ ] correção assistida;
-* \[ ] remoção ou isolamento de duplicatas;
-* \[ ] remapeamento de classes;
-* \[ ] validação após correção;
-* \[ ] histórico das alterações;
-* \[ ] possibilidade de rollback.
+- [ ] Streamlit Dashboard;
+- [ ] gráficos interativos;
+- [ ] filtros por classe;
+- [ ] visualização dos problemas;
+- [ ] histórico de auditorias;
+- [ ] comparação entre datasets;
+- [ ] comparação entre versões do mesmo dataset;
+- [ ] visualização de exemplos problemáticos.
 
-\---
+---
 
-## Etapa 6 — Smart Audit
+## Etapa 6 — Correction Engine
 
-* \[ ] integração com modelos de detecção;
-* \[ ] identificação de objetos potencialmente não anotados;
-* \[ ] detecção de anomalias;
-* \[ ] embeddings;
-* \[ ] similaridade semântica;
-* \[ ] sugestões de inconsistências;
-* \[ ] sugestões de correção.
+- [ ] identificação de correções de baixo risco;
+- [ ] correção assistida;
+- [ ] remoção ou isolamento de duplicatas;
+- [ ] remapeamento de classes;
+- [ ] validação após correção;
+- [ ] histórico das alterações;
+- [ ] possibilidade de rollback.
 
-\---
+---
 
-## Etapa 7 — Avaliação Experimental
+## Etapa 7 — Smart Audit
 
-* \[ ] seleção de datasets para avaliação;
-* \[ ] definição dos experimentos;
-* \[ ] comparação entre versões dos datasets;
-* \[ ] treinamento de modelos;
-* \[ ] avaliação antes e depois das melhorias;
-* \[ ] análise das métricas;
-* \[ ] documentação dos resultados;
-* \[ ] consolidação das conclusões.
+- [ ] integração com modelos de detecção;
+- [ ] identificação de objetos potencialmente não anotados;
+- [ ] detecção de anomalias;
+- [ ] embeddings;
+- [ ] similaridade semântica;
+- [ ] sugestões de inconsistências;
+- [ ] sugestões de correção.
 
-\---
+---
 
-# 14\. Estrutura Inicial do Projeto
+## Etapa 8 — Avaliação Experimental
+
+- [ ] seleção de datasets para avaliação;
+- [ ] definição dos experimentos;
+- [ ] comparação entre versões dos datasets;
+- [ ] treinamento de modelos;
+- [ ] avaliação antes e depois das melhorias;
+- [ ] análise das métricas;
+- [ ] documentação dos resultados;
+- [ ] consolidação das conclusões.
+
+---
+
+# 14. Estrutura Inicial do Projeto
 
 ```text
 quality-pipeline/
@@ -880,11 +1000,11 @@ quality-pipeline/
 ├── .gitignore
 │
 ├── src/
-│   └── quality\_pipeline/
+│   └── quality_pipeline/
 │       │
 │       ├── parsers/
-│       │   ├── yolo.py
-│       │   └── coco.py
+│       │   ├── coco.py
+│       │   └── yolo.py
 │       │
 │       ├── models/
 │       │   ├── dataset.py
@@ -893,24 +1013,25 @@ quality-pipeline/
 │       │
 │       ├── auditors/
 │       │   ├── statistics.py
-│       │   ├── missing\_annotations.py
-│       │   ├── class\_balance.py
-│       │   ├── polygon\_validator.py
-│       │   ├── small\_masks.py
-│       │   ├── large\_masks.py
-│       │   ├── duplicate\_images.py
-│       │   └── duplicate\_annotations.py
+│       │   ├── missing_annotations.py
+│       │   ├── class_balance.py
+│       │   ├── polygon_validator.py
+│       │   ├── small_masks.py
+│       │   ├── large_masks.py
+│       │   ├── duplicate_images.py
+│       │   ├── duplicate_annotations.py
+│       │   └── annotation_consistency.py
 │       │
 │       ├── metrics/
 │       │   ├── completeness.py
-│       │   ├── class\_balance.py
-│       │   ├── mask\_coverage.py
-│       │   └── duplicate\_rate.py
+│       │   ├── class_balance.py
+│       │   ├── mask_coverage.py
+│       │   └── duplicate_rate.py
 │       │
 │       ├── reports/
-│       │   ├── json\_report.py
-│       │   ├── markdown\_report.py
-│       │   └── html\_report.py
+│       │   ├── json_report.py
+│       │   ├── markdown_report.py
+│       │   └── html_report.py
 │       │
 │       ├── correction/
 │       │   └── ...
@@ -918,10 +1039,10 @@ quality-pipeline/
 │       └── cli.py
 │
 ├── tests/
-│   ├── test\_parsers/
-│   ├── test\_auditors/
-│   ├── test\_metrics/
-│   └── test\_reports/
+│   ├── test_parsers/
+│   ├── test_auditors/
+│   ├── test_metrics/
+│   └── test_reports/
 │
 ├── dashboard/
 │   └── app.py
@@ -931,56 +1052,57 @@ quality-pipeline/
 └── docs/
 ```
 
-\---
+---
 
-# 15\. Tecnologias
+# 15. Tecnologias
 
 ## Backend
 
-* Python
-* Pandas
-* NumPy
+- Python
+- Pandas
+- NumPy
 
 ## Computer Vision e Geometria
 
-* OpenCV
-* Shapely
-* scikit-image
+- OpenCV
+- Shapely
+- scikit-image
 
 ## Dataset Formats
 
-* YOLO Segmentation
-* COCO
+- COCO Segmentation — formato principal do MVP;
+- YOLO Segmentation — suporte posterior.
 
 ## Dashboard
 
-* Streamlit
-* Plotly
+- Streamlit
+- Plotly
 
 ## Testing
 
-* pytest
+- pytest
 
-\---
+---
 
-# 16\. Resultados Esperados
+# 16. Resultados Esperados
 
 Ao final do projeto, espera-se obter:
 
-* uma pipeline reutilizável de auditoria de datasets;
-* validação automatizada de datasets de segmentação;
-* métricas quantitativas de qualidade;
-* relatórios padronizados;
-* dashboard para análise dos resultados;
-* mecanismos de correção assistida e automática;
-* capacidade de comparar versões de datasets;
-* funcionalidades de auditoria inteligente;
-* base experimental para investigar a relação entre qualidade dos dados e desempenho de modelos;
-* redução do esforço manual necessário para processos de QA.
+- uma pipeline reutilizável de auditoria de datasets;
+- validação automatizada de datasets de segmentação;
+- métricas quantitativas de qualidade;
+- relatórios padronizados;
+- dashboard para análise dos resultados;
+- mecanismos de correção assistida e automática;
+- capacidade de comparar versões de datasets;
+- suporte a diferentes formatos de dataset;
+- funcionalidades de auditoria inteligente;
+- base experimental para investigar a relação entre qualidade dos dados e desempenho de modelos;
+- redução do esforço manual necessário para processos de QA.
 
-\---
+---
 
-# 17\. Visão de Longo Prazo
+# 17. Visão de Longo Prazo
 
 A visão do projeto é transformar a ferramenta em uma solução interna de **Quality Assurance para datasets de Visão Computacional**, capaz de:
 
@@ -1002,6 +1124,8 @@ Monitorar
 Investigar
 ```
 
-O foco inicial será em datasets de segmentação exportados do CVAT, com arquitetura preparada para evolução para outros formatos, tarefas e métodos de auditoria.
+O foco inicial será em datasets de segmentação exportados do CVAT em **formato COCO**, com `annotations.json` como principal entrada do MVP.
 
-\---
+A arquitetura será preparada para suportar posteriormente YOLO e outros formatos, tarefas e métodos de auditoria.
+
+---
