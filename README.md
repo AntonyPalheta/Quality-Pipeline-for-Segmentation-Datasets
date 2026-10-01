@@ -254,7 +254,6 @@ auditors/
 ├── small_masks.py
 ├── large_masks.py
 ├── duplicate_images.py
-├── duplicate_annotations.py
 └── annotation_consistency.py
 ```
 
@@ -438,29 +437,7 @@ Possível duplicata / imagem muito semelhante
 
 ---
 
-## 4.8 Duplicate Annotations
-
-Detectar anotações potencialmente duplicadas.
-
-Uma estratégia inicial poderá utilizar sobreposição geométrica:
-
-```text
-IoU
-```
-
-Exemplo conceitual:
-
-```text
-IoU > 0.90
-```
-
-pode ser utilizado como critério inicial para sinalizar possíveis duplicidades.
-
-O limiar deverá ser configurável e validado experimentalmente.
-
----
-
-## 4.9 Annotation Consistency
+## 4.8 Annotation Consistency
 
 Comparar características das anotações dentro de uma mesma classe para identificar possíveis outliers.
 
@@ -917,7 +894,6 @@ O projeto será desenvolvido ao longo do período de estágio, com entregas parc
 
 ## Etapa 3 — Expansão da Auditoria
 
-- [ ] Duplicate Annotations;
 - [ ] Annotation Consistency;
 - [ ] métricas avançadas;
 - [ ] Mask Area Distribution;
