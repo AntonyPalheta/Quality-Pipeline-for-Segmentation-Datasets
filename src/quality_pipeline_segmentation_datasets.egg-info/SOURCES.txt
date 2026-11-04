@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+src/quality_pipeline/__init__.py
+src/quality_pipeline/auditors/__init__.py
+src/quality_pipeline/models/__init__.py
+src/quality_pipeline/parsers/__init__.py
+src/quality_pipeline_segmentation_datasets.egg-info/PKG-INFO
+src/quality_pipeline_segmentation_datasets.egg-info/SOURCES.txt
+src/quality_pipeline_segmentation_datasets.egg-info/dependency_links.txt
+src/quality_pipeline_segmentation_datasets.egg-info/requires.txt
+src/quality_pipeline_segmentation_datasets.egg-info/top_level.txt
