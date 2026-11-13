@@ -1,5 +1,4 @@
 
-
 """
 Este módulo define a interface pública do pacote models.
 
@@ -8,6 +7,7 @@ para que possam ser importados diretamente pelo pacote models,
 sem precisar indicar o arquivo individual de cada implementação.
 """
 
+from .annotation import Annotation
 from .bounding_box import BoundingBox
 from .category import Category
 from .image import Image
@@ -19,6 +19,7 @@ from .segmentation import (
 
 
 __all__ = [
+    "Annotation",
     "BoundingBox",
     "Category",
     "Image",
