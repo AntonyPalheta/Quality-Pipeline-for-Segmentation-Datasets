@@ -1,244 +1,562 @@
-## 1. Objetivo da arquitetura
+# Arquitetura do Projeto
 
-O Quality Pipeline deverá suportar diferentes formatos de exportação de datasets de segmentação, inicialmente COCO e futuramente Ultralytics YOLO Segmentation.
+**Projeto:** Quality Pipeline for Segmentation Datasets
 
-Embora esses formatos representem informações semelhantes, eles possuem estruturas diferentes para armazenar imagens, categorias e anotações.
+**Status:** Arquitetura definida e modelos internos implementados inicialmente.
 
-Para evitar dependência de um formato específico, o projeto utilizará uma representação interna padronizada.
+**Última atualização:** 13/11/2026
+
+---
+
+## 1. Objetivo
+
+Este documento registra as decisões arquiteturais e os contratos técnicos que orientam a implementação do Quality Pipeline for Segmentation Datasets.
+
+O projeto deverá suportar diferentes formatos de exportação de datasets de segmentação, inicialmente COCO e futuramente Ultralytics YOLO Segmentation.
+
+Embora esses formatos representem informações semelhantes, possuem estruturas diferentes para armazenar imagens, categorias, anotações e segmentações.
+
+Para evitar dependência de um formato específico, o projeto utilizará modelos internos padronizados.
 
 Essa representação permitirá que os mecanismos de auditoria trabalhem independentemente do formato de origem dos dados.
 
-## 2. Princípio arquitetural: independência de formato
+## 2. Princípios arquiteturais
 
 A arquitetura será organizada em três responsabilidades principais:
 
-- **Parsers:** interpretam os formatos externos e convertem seus dados para os modelos internos.
-- **Models:** representam os dados de maneira padronizada, independentemente do formato de origem.
-- **Auditors:** executam verificações de qualidade utilizando os modelos internos.
+### 2.1 Parsers
 
-Fluxo geral:
+Responsáveis por:
+
+- Interpretar os formatos externos.
+- Ler imagens, categorias e anotações.
+- Converter coordenadas e representações geométricas.
+- Preservar informações relevantes dos dados originais.
+- Construir instâncias dos modelos internos.
+
+Cada formato terá seu próprio parser.
+
+### 2.2 Models
+
+Responsáveis por:
+
+- Representar os dados de maneira padronizada.
+- Manter os atributos e relacionamentos dos elementos do dataset.
+- Oferecer estruturas independentes dos formatos externos.
+
+Os modelos não deverão conter lógica específica de leitura de COCO ou YOLO.
+
+### 2.3 Auditors
+
+Responsáveis por:
+
+- Executar verificações de qualidade.
+- Identificar inconsistências estruturais e geométricas.
+- Identificar possíveis problemas de anotação.
+- Produzir resultados padronizados para revisão.
+
+Os auditors receberão os modelos internos, sem depender diretamente dos arquivos originais.
+
+### 2.4 Fluxo geral
 
 ```text
 Dataset COCO ──> COCO Parser ───────┐
-                                   │
+                                   |
                                    v
                             Modelos internos
-                                   │
+                                   |
                                    v
-                              Auditors
+                              Audit Engine
                                    ^
-                                   │
+                                   |
 Dataset YOLO ──> YOLO Parser ──────┘
+                                   |
+                                   v
+                              Audit Results
+                                   |
+                                   v
+                             Quality Metrics
+                                   |
+                                   v
+                             Quality Reports
 ```
 
-O mecanismo de auditoria não deverá depender diretamente da estrutura dos arquivos COCO ou YOLO.
+O objetivo é permitir que os mesmos mecanismos de auditoria sejam utilizados em datasets provenientes de diferentes formatos.
 
 ## 3. Modelos internos
 
-Os modelos serão organizados em classes responsáveis por representar os principais elementos de um dataset de segmentação.
+Os modelos internos representam os principais elementos de um dataset de segmentação.
+
+A implementação inicial utiliza classes Python baseadas em `dataclasses`.
 
 ### 3.1 Category
+
+**Arquivo:** `models/category.py`
 
 Representa uma categoria existente no dataset.
 
 Atributos:
 
-- `id`: identificador da categoria dentro do dataset.
-- `name`: nome da categoria.
-- `supercategory`: agrupamento superior, quando disponível.
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| `id` | `int` | Identificador da categoria dentro do dataset |
+| `name` | `str` | Nome da categoria |
+| `supercategory` | `str \| None` | Agrupamento superior, quando disponível |
 
-Os IDs e nomes serão obtidos a partir do dataset de origem. Não haverá categorias predefinidas ou dependência de um domínio específico.
+Os IDs e nomes serão obtidos a partir dos dados de origem.
+
+Não haverá categorias predefinidas ou dependência de um domínio específico.
+
+Categorias com nomes semelhantes não serão unificadas automaticamente.
 
 ### 3.2 Image
+
+**Arquivo:** `models/image.py`
 
 Representa uma imagem pertencente ao dataset.
 
 Atributos:
 
-- `id`: identificador interno da imagem.
-- `file_name`: nome ou caminho relativo original da imagem.
-- `width`: largura em pixels.
-- `height`: altura em pixels.
-- `resolved_path`: caminho local completo da imagem, quando resolvido.
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| `id` | `int` | Identificador interno da imagem |
+| `file_name` | `str` | Nome ou caminho relativo original da imagem |
+| `width` | `int` | Largura em pixels |
+| `height` | `int` | Altura em pixels |
+| `resolved_path` | `Path \| None` | Caminho local completo, quando resolvido |
 
-O caminho original e o caminho local serão armazenados separadamente.
+O caminho original será preservado separadamente do caminho local resolvido.
 
-O projeto não deverá depender de nomes fixos de diretórios ou batches gerados pelo CVAT.
+Essa separação evita dependência de diretórios ou nomes de batches específicos das exportações do CVAT.
+
+A resolução dos caminhos será responsabilidade dos parsers.
+
+A verificação da existência física dos arquivos poderá ser realizada por mecanismos específicos de auditoria.
 
 ### 3.3 Segmentation
 
-Representa a geometria da segmentação de maneira independente do formato de origem.
+**Arquivo:** `models/segmentation.py`
 
-Serão suportadas duas representações principais:
+Representa a geometria de uma segmentação independentemente do formato de origem.
 
-**PolygonSegmentation**
+A implementação utiliza duas representações.
+
+#### PolygonSegmentation
 
 Representa a segmentação por meio de um ou mais polígonos.
 
-Cada polígono será composto por pontos com coordenadas `(x, y)` expressas em pixels, relativas à imagem original.
+Estrutura:
 
-A representação permitirá múltiplas partes de um mesmo objeto.
+```python
+polygons: list[list[tuple[float, float]]]
+```
 
-**MaskSegmentation**
+Cada polígono é uma sequência de pontos `(x, y)`.
 
-Representa a segmentação por meio de uma máscara binária, na qual os pixels indicam a presença ou ausência do objeto.
+As coordenadas serão expressas em pixels, relativas à imagem original.
 
-Máscaras poderão representar regiões desconectadas e buracos.
+A estrutura permite representar objetos compostos por múltiplas partes geométricas.
 
-A representação interna não deverá depender da codificação RLE específica do COCO.
+Atualmente, a estrutura armazena os polígonos, mas ainda não implementa validações geométricas, como interseções entre arestas, quantidade mínima de vértices ou coordenadas fora dos limites da imagem.
 
-O parser será responsável por converter RLE para a representação interna de máscara.
+Também não possui uma semântica explícita para distinguir contornos externos de buracos geométricos. Essa necessidade deverá ser avaliada durante a implementação dos parsers e auditors.
 
-A estratégia de armazenamento e decodificação das máscaras deverá considerar o consumo de memória e será validada durante a implementação.
+#### MaskSegmentation
+
+Representa uma segmentação por meio de uma máscara binária.
+
+A implementação interna utiliza uma representação própria de RLE (Run-Length Encoding), independente das codificações específicas dos formatos externos.
+
+Atributos:
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| `width` | `int` | Largura da máscara em pixels |
+| `height` | `int` | Altura da máscara em pixels |
+| `runs` | `tuple[int, ...]` | Sequência de comprimentos dos segmentos de pixels |
+
+#### Convenção do RLE interno
+
+A representação interna seguirá estas regras:
+
+1. A máscara será percorrida em ordem de linhas (row-major), da esquerda para a direita e de cima para baixo.
+2. A sequência começará contabilizando pixels de fundo (`0`).
+3. Os segmentos alternarão entre pixels de fundo (`0`) e pixels de primeiro plano (`1`).
+4. Cada valor de `runs` representará a quantidade de pixels consecutivos de um mesmo tipo.
+5. A soma das contagens deverá corresponder a `width * height`.
+
+Exemplo:
+
+Máscara binária:
+
+```text
+0 1 1
+0 0 1
+```
+
+Sequência de pixels em row-major:
+
+```text
+0 1 1 0 0 1
+```
+
+Representação interna:
+
+```python
+runs = (1, 2, 2, 1)
+```
+
+Caso a máscara comece diretamente com um pixel de primeiro plano, a primeira contagem poderá ser zero para manter a convenção de início pelo fundo.
+
+A representação foi escolhida para desacoplar o modelo interno das codificações RLE externas.
+
+**Estado atual:** a estrutura de armazenamento está implementada. As funções de codificação, decodificação e validação estrutural ainda serão desenvolvidas.
+
+#### TypeAlias Segmentation
+
+O tipo `Segmentation` representa a união das duas representações aceitas:
+
+```python
+Segmentation = PolygonSegmentation | MaskSegmentation
+```
+
+Esse tipo permite que outros modelos aceitem tanto segmentações poligonais quanto máscaras binárias, sem depender de uma implementação específica.
 
 ### 3.4 BoundingBox
 
-Representa a caixa delimitadora de uma anotação.
+**Arquivo:** `models/bounding_box.py`
 
-Atributos planejados:
+Representa a caixa delimitadora de um objeto em uma imagem.
 
-- `x`: coordenada horizontal do canto superior esquerdo.
-- `y`: coordenada vertical do canto superior esquerdo.
-- `width`: largura da caixa.
-- `height`: altura da caixa.
+Atributos:
 
-Todas as coordenadas serão expressas em pixels.
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| `x` | `float` | Coordenada horizontal do canto superior esquerdo |
+| `y` | `float` | Coordenada vertical do canto superior esquerdo |
+| `width` | `float` | Largura da caixa em pixels |
+| `height` | `float` | Altura da caixa em pixels |
 
-A bounding box será opcional dentro de uma anotação, pois nem todos os formatos fornecem esse dado diretamente.
+A representação utiliza coordenadas em pixels, com origem no canto superior esquerdo.
+
+O modelo não valida atualmente limites, dimensões positivas ou compatibilidade com a imagem.
+
+Essas verificações serão realizadas por mecanismos específicos do pipeline.
 
 ### 3.5 Annotation
 
+**Arquivo:** `models/annotation.py`
+
 Representa uma instância de objeto anotada em uma imagem.
 
-Atributos planejados:
+Atributos:
 
-- `id`: identificador único da anotação dentro do dataset.
-- `image_id`: referência à imagem relacionada.
-- `category_id`: referência à categoria relacionada.
-- `segmentation`: representação geométrica da anotação.
-- `bbox`: bounding box, quando disponível.
-- `area`: área da anotação, quando disponível.
-- `is_crowd`: indica se a anotação representa um agrupamento de objetos, quando essa informação existir.
-- `attributes`: metadados adicionais associados à anotação.
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| `id` | `int` | Identificador da anotação dentro do dataset |
+| `image_id` | `int` | Referência à imagem relacionada |
+| `category_id` | `int` | Referência à categoria relacionada |
+| `segmentation` | `Segmentation \| None` | Representação geométrica da segmentação |
+| `bbox` | `BoundingBox \| None` | Caixa delimitadora, quando disponível |
+| `area` | `float \| None` | Área da anotação, quando disponível |
+| `is_crowd` | `bool \| None` | Informação de agrupamento, quando disponível |
+| `attributes` | `dict[str, object]` | Metadados adicionais |
 
-A segmentação será representada pelo modelo `Segmentation`, sem armazenar diretamente estruturas específicas de COCO ou YOLO.
+A classe relaciona uma imagem, uma categoria e uma representação geométrica de segmentação.
 
-Informações ausentes na origem deverão permanecer como não disponíveis (`None`) quando aplicável, em vez de receber valores presumidos.
+Os relacionamentos são armazenados por meio de identificadores (`image_id` e `category_id`), evitando duplicação dos objetos completos.
+
+A segmentação e a bounding box são opcionais para permitir a representação de registros incompletos e a posterior identificação dessas situações pelas auditorias.
+
+Valores indisponíveis deverão permanecer como `None`, quando aplicável, em vez de receber valores presumidos.
+
+O campo `attributes` utiliza `default_factory` para garantir que diferentes anotações possuam dicionários independentes.
 
 ### 3.6 Dataset
 
+**Arquivo:** `models/dataset.py`
+
 Representa o conjunto completo de dados após a conversão para os modelos internos.
 
-Deverá reunir:
+Atributos:
 
-- Imagens (`Image`).
-- Categorias (`Category`).
-- Anotações (`Annotation`).
-- Metadados gerais, quando disponíveis.
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| `images` | `list[Image]` | Imagens do dataset |
+| `categories` | `list[Category]` | Categorias existentes |
+| `annotations` | `list[Annotation]` | Anotações do dataset |
+| `metadata` | `dict[str, object]` | Metadados gerais |
+
+O modelo funciona como agregador das principais estruturas do dataset.
+
+As listas e os metadados possuem valores padrão independentes por instância, utilizando `default_factory`.
+
+O modelo não verifica atualmente a integridade dos relacionamentos entre imagens, categorias e anotações.
+
+Essas verificações serão implementadas em etapas posteriores.
 
 ## 4. Padronização das coordenadas
 
-As representações geométricas internas utilizarão coordenadas em pixels, relativas às dimensões originais da imagem.
+Todas as representações geométricas internas deverão utilizar coordenadas em pixels, relativas às dimensões originais da imagem.
 
-O sistema de coordenadas adotará:
+Convenção adotada:
 
 - Origem no canto superior esquerdo.
 - Eixo X crescente da esquerda para a direita.
 - Eixo Y crescente de cima para baixo.
+- Dimensões expressas em pixels.
 
-### Conversão COCO
+### 4.1 Conversão COCO
 
-As coordenadas dos polígonos COCO já são expressas em pixels e poderão ser utilizadas diretamente, após a interpretação pelo parser.
+O formato COCO utiliza coordenadas de polígonos em pixels.
 
-Representações RLE deverão ser convertidas para máscaras internas.
+Essas coordenadas poderão ser preservadas diretamente pelo parser após a interpretação dos dados.
 
-### Conversão YOLO Segmentation
+A bounding box COCO utiliza:
+
+```text
+[x, y, width, height]
+```
+
+Essa representação corresponde diretamente ao modelo interno `BoundingBox`.
+
+Para segmentações RLE, o parser deverá interpretar a codificação original do COCO e convertê-la para a representação interna.
+
+Essa conversão deverá considerar que o RLE do COCO utiliza uma ordem de varredura diferente da convenção row-major adotada internamente.
+
+Portanto, não será correto copiar diretamente as contagens do RLE COCO para `MaskSegmentation.runs`.
+
+### 4.2 Conversão Ultralytics YOLO Segmentation
 
 O formato Ultralytics YOLO Segmentation utiliza coordenadas normalizadas entre 0 e 1.
 
-O parser deverá converter essas coordenadas para pixels:
+Cada linha do arquivo TXT representa uma instância de objeto e contém:
+
+```text
+class_id x1 y1 x2 y2 ... xn yn
+```
+
+O parser deverá:
+
+1. Identificar a categoria por meio do `class_id`.
+2. Interpretar os pares de coordenadas.
+3. Obter as dimensões originais da imagem.
+4. Converter as coordenadas normalizadas para pixels.
+
+Conversão:
 
 ```text
 x_pixel = x_normalizado * largura_da_imagem
-
 y_pixel = y_normalizado * altura_da_imagem
 ```
 
-Dessa maneira, os modelos internos utilizarão uma única convenção geométrica.
+Dessa maneira, os dois formatos alimentarão a mesma representação geométrica interna.
 
 ## 5. Formatos de entrada
 
-### 5.1 COCO
+### 5.1 COCO Segmentation
 
-Será o primeiro formato implementado.
+Será o primeiro formato a receber suporte.
 
 O parser deverá interpretar:
 
 - `images`
 - `categories`
 - `annotations`
-- Polígonos
-- RLE
+- Segmentações poligonais
+- Segmentações RLE
 - Bounding boxes
 - Áreas
+- `iscrowd`
 - Atributos adicionais
+
+A resolução dos caminhos das imagens deverá utilizar um diretório raiz configurável, preservando o valor original de `file_name`.
 
 ### 5.2 Ultralytics YOLO Segmentation 1.0
 
-Será o próximo formato a receber suporte.
+Será o segundo formato a receber suporte.
 
 O parser deverá interpretar:
 
 - `data.yaml`
-- Diretórios de imagens e anotações.
-- Arquivos TXT com coordenadas dos polígonos.
+- Estrutura de diretórios.
+- Imagens.
+- Arquivos TXT de anotações.
 - Identificadores de classes.
-- Coordenadas normalizadas.
+- Polígonos normalizados.
 - Divisões do dataset, como train, val e test.
 
-As dimensões das imagens poderão ser obtidas diretamente dos arquivos de imagem.
+Informações não fornecidas pelo formato, como `is_crowd`, deverão permanecer indisponíveis (`None`), quando aplicável.
 
-Como esse formato não fornece alguns atributos existentes no COCO, como `area` e `iscrowd`, eles permanecerão indisponíveis quando não puderem ser obtidos com segurança.
+Bounding boxes poderão ser derivadas dos polígonos quando necessário, desde que a conversão seja definida e documentada.
 
 ### 5.3 YOLO 1.1
 
-O formato clássico YOLO 1.1 representa anotações por bounding boxes e não será utilizado como formato de entrada para o parser de segmentação.
+O formato clássico YOLO 1.1 representa anotações por bounding boxes.
 
-O suporte futuro a outros formatos deverá respeitar a separação entre parsers e modelos internos.
+Ele não será tratado como formato de segmentação poligonal, pois não fornece a geometria necessária para reconstruir máscaras de objetos.
 
-## 6. Regras gerais de implementação
+## 6. Responsabilidades e validações
 
-- Os modelos internos não deverão depender de estruturas específicas do COCO ou YOLO.
-- Os IDs serão únicos dentro de cada dataset, sem pressupor identificadores globais entre datasets diferentes.
-- Os parsers serão responsáveis por atribuir IDs internos quando o formato de origem não fornecer identificadores.
-- Categorias deverão preservar seus nomes e identificadores originais, sem unificação automática de categorias semelhantes.
-- Os caminhos das imagens deverão ser resolvidos de maneira configurável.
-- A ausência de informações deverá ser representada corretamente, sem presumir valores.
-- Os modelos serão responsáveis pela representação dos dados, enquanto as verificações de qualidade serão implementadas nos auditors.
+Uma separação importante da arquitetura será a diferença entre interpretação estrutural e auditoria de qualidade.
 
-## 7. Benefícios esperados
+### Parsers
 
-Essa arquitetura busca proporcionar:
+Responsáveis por:
 
-- Reutilização das auditorias entre diferentes formatos.
-- Redução da duplicação de código.
-- Facilidade para adicionar novos formatos.
-- Separação clara entre leitura, representação e validação.
-- Maior flexibilidade para diferentes domínios e tipos de datasets.
-- Facilidade de manutenção e evolução do projeto.
+- Ler os arquivos de entrada.
+- Verificar se os dados possuem estruturas compatíveis com o formato esperado.
+- Converter tipos e representações.
+- Resolver caminhos.
+- Construir os modelos internos.
 
-## 8. Pontos que serão validados durante a implementação
+Erros que impeçam a interpretação dos dados poderão gerar exceções específicas do parser.
 
-Algumas decisões de baixo nível ainda deverão ser testadas:
+### Models
 
-- Estratégia de armazenamento e decodificação de máscaras, considerando consumo de memória.
-- Tratamento de geometrias com múltiplas partes e particularidades de buracos.
-- Estratégia para obtenção ou cálculo de bounding boxes.
+Responsáveis por representar os dados.
+
+Não deverão classificar anotações como corretas ou incorretas nem executar auditorias de qualidade.
+
+Validações de integridade estrutural necessárias para a segurança das representações poderão ser adicionadas conforme a implementação evoluir.
+
+### Auditors
+
+Responsáveis por identificar problemas de qualidade.
+
+Exemplos:
+
+- Polígonos com geometria inválida.
+- Coordenadas fora dos limites da imagem.
+- Máscaras estruturalmente inconsistentes.
+- Imagens sem anotações.
+- Referências inválidas.
+- Categorias desbalanceadas.
+- Máscaras potencialmente pequenas ou grandes.
+
+Uma ocorrência suspeita deverá ser sinalizada para revisão, não automaticamente classificada como erro definitivo.
+
+A ausência de anotações também deverá ser analisada considerando que algumas imagens podem ser negativas de forma legítima.
+
+## 7. Regras gerais da arquitetura
+
+- Os modelos internos não deverão depender diretamente de COCO ou YOLO.
+- Os identificadores serão únicos dentro de cada dataset, sem pressupor identificadores globais entre datasets diferentes.
+- Categorias deverão preservar seus identificadores e nomes originais.
+- Categorias semelhantes não serão unificadas automaticamente.
+- Os caminhos das imagens deverão ser configuráveis.
+- Informações ausentes deverão ser representadas corretamente.
+- A geometria interna utilizará coordenadas em pixels.
+- Os parsers serão responsáveis pelas conversões de formatos.
+- Os auditors serão responsáveis pelas verificações de qualidade.
+- Os resultados das auditorias deverão utilizar uma estrutura padronizada.
+
+## 8. Organização dos diretórios
+
+A estrutura planejada para a implementação dos componentes principais é:
+
+```text
+src/
+└── quality_pipeline/
+    ├── __init__.py
+    │
+    ├── models/
+    │   ├── __init__.py
+    │   ├── category.py
+    │   ├── image.py
+    │   ├── segmentation.py
+    │   ├── bounding_box.py
+    │   ├── annotation.py
+    │   └── dataset.py
+    │
+    ├── parsers/
+    │   ├── __init__.py
+    │   ├── coco_parser.py
+    │   └── yolo_segmentation_parser.py
+    │
+    └── auditors/
+        ├── __init__.py
+        ├── base.py
+        └── audit_result.py
+```
+
+Os arquivos dos parsers e auditors representam a estrutura planejada e serão criados conforme a implementação avançar.
+
+## 9. Estado atual da implementação
+
+### Modelos implementados
+
+| Componente | Estado |
+|---|---|
+| Category | Implementado inicialmente |
+| Image | Implementado inicialmente |
+| PolygonSegmentation | Implementado inicialmente |
+| MaskSegmentation | Estrutura RLE implementada |
+| BoundingBox | Implementado inicialmente |
+| Annotation | Implementado inicialmente |
+| Dataset | Implementado inicialmente |
+
+Os modelos possuem testes automatizados iniciais.
+
+A última validação registrada nesta etapa apresentou 15 testes aprovados.
+
+Esses testes verificam principalmente armazenamento de atributos, valores opcionais e independência de coleções e metadados.
+
+Eles ainda não representam uma validação completa das conversões dos formatos externos ou das regras geométricas.
+
+### Componentes pendentes
+
+| Componente | Estado |
+|---|---|
+| COCO Parser | Não implementado |
+| YOLO Segmentation Parser | Não implementado |
+| Codificação e decodificação do RLE interno | Pendente |
+| Validações estruturais de máscaras | Pendentes |
+| Audit Engine | Não implementado |
+| AuditResult | Não implementado |
+| Auditores | Não implementados |
+| Métricas | Não implementadas |
+| Relatórios | Não implementados |
+| CLI | Não implementada |
+
+## 10. Próximas decisões e validações
+
+Durante as próximas etapas, deverão ser definidos e testados:
+
+- Estratégia de codificação e decodificação das máscaras.
+- Conversão correta entre RLE COCO e RLE interno.
+- Tratamento de múltiplas partes de polígonos.
+- Tratamento de buracos geométricos.
+- Critérios para polígonos inválidos.
+- Critérios para máscaras pequenas e grandes.
+- Estratégia de resolução e validação dos caminhos das imagens.
 - Preservação de metadados específicos dos formatos.
-- Resolução de caminhos em diferentes estruturas de exportação.
+- Integridade dos relacionamentos entre imagens, categorias e anotações.
 
-Esses pontos deverão ser resolvidos sem comprometer o princípio de independência dos modelos em relação aos formatos externos.
+Essas decisões deverão preservar a independência dos modelos internos em relação aos formatos externos.
+
+## 11. Decisões de escopo
+
+A ferramenta será genérica e reutilizável em diferentes projetos de segmentação.
+
+Não haverá categorias ou regras específicas para um domínio particular.
+
+O sistema não utilizará um único indicador subjetivo de qualidade, como Dataset Health Score. Os resultados serão apresentados por meio de métricas individuais e ocorrências identificadas pelas auditorias.
+
+A auditoria de Duplicate Annotations não faz parte do escopo definido.
+
+A identificação de imagens duplicadas permanece como funcionalidade planejada.
+
+Anotações suspeitas deverão ser sinalizadas para revisão humana, sem assumir automaticamente que estão incorretas.
 
 ---
 
-**Decisão arquitetural:** os modelos internos serão compartilhados por todos os formatos suportados. Cada formato terá seu próprio parser, responsável por converter seus dados para a representação interna padronizada.
+## 12. Decisão arquitetural consolidada
+
+Os modelos internos serão compartilhados por todos os formatos suportados.
+
+Cada formato terá seu próprio parser, responsável por interpretar os dados externos e convertê-los para a representação interna padronizada.
+
+Os auditores trabalharão exclusivamente com essa representação interna, permitindo reutilização das verificações e reduzindo a duplicação de código.
+
+A arquitetura deverá evoluir de maneira incremental, preservando a separação entre interpretação, representação, auditoria e apresentação dos resultados.
