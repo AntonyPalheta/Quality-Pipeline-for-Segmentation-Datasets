@@ -8,6 +8,10 @@ sem precisar indicar o arquivo individual de cada classe.
 """
 
 from .category import Category
+from .image import Image
 
 
-__all__ = ["Category"]
+__all__ = [
+    "Category",
+    "Image",
+]
