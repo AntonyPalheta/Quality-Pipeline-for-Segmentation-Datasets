@@ -10,12 +10,13 @@ Sua responsabilidade é:
 - Converter categorias para o modelo Category.
 - Converter anotações para o modelo Annotation.
 - Converter segmentações poligonais para PolygonSegmentation.
+- Converter segmentações RLE para MaskSegmentation.
 - Converter bounding boxes para BoundingBox.
-- Preservar metadados adicionais das anotações.
+- Preservar os atributos adicionais das anotações.
 - Resolver caminhos locais das imagens utilizando uma raiz configurável.
 
-Nesta versão, as segmentações poligonais são suportadas.
-A conversão de segmentações RLE será implementada posteriormente.
+São suportadas segmentações poligonais, RLE comprimido
+e RLE não comprimido.
 """
 
 import json
@@ -33,6 +34,7 @@ from ..models import (
     Segmentation,
 )
 
+from .coco_rle import CocoRLEError, decode_coco_rle
 
 class CocoParserError(ValueError):
     """
@@ -46,17 +48,17 @@ class CocoParserError(ValueError):
 
 class CocoParser:
     """
-    Interpreta datasets COCO e converte seus dados para
-    os modelos internos do Quality Pipeline.
+Interpreta datasets COCO e converte seus dados para
+os modelos internos do Quality Pipeline.
 
-    Nesta versão, são suportadas imagens, categorias,
-    anotações poligonais e bounding boxes.
+São suportadas imagens, categorias, anotações com
+segmentações poligonais ou RLE e bounding boxes.
 
-    Attributes:
-        annotation_file: Caminho do arquivo annotations.json.
-        images_root: Diretório raiz utilizado para resolver
-                     os caminhos relativos das imagens.
-    """
+Attributes:
+    annotation_file: Caminho do arquivo annotations.json.
+    images_root: Diretório raiz utilizado para resolver
+                 os caminhos relativos das imagens.
+"""
 
     def __init__(
         self,
@@ -357,39 +359,43 @@ class CocoParser:
             attributes=attributes,
         )
 
+    
     @staticmethod
     def _parse_segmentation(
         data: Any,
     ) -> Segmentation | None:
         """
-        Converte uma segmentação poligonal COCO para o modelo interno.
+        Converte uma segmentação COCO para a representação interna.
 
-        Cada polígono COCO contém uma lista plana de coordenadas:
-        x1, y1, x2, y2, x3, y3...
+        Suporta:
+        - Polígonos.
+        - RLE comprimido.
+        - RLE não comprimido.
 
-        As coordenadas são preservadas em pixels.
-
-        Segmentações RLE ainda não são suportadas nesta versão.
+        As coordenadas dos polígonos são preservadas em pixels.
+        As máscaras RLE são convertidas para a representação interna
+        row-major.
 
         Args:
             data: Campo segmentation de uma anotação COCO.
 
         Returns:
-            PolygonSegmentation ou None quando a segmentação
-            está ausente ou vazia.
+            PolygonSegmentation, MaskSegmentation ou None.
 
         Raises:
-            CocoParserError: Quando a estrutura poligonal é inválida
-                             ou contém uma representação RLE.
+            CocoParserError: Quando a estrutura da segmentação é inválida.
         """
         if data is None or data == []:
             return None
 
         if isinstance(data, dict):
-            raise CocoParserError(
-                "Segmentação RLE ainda não é suportada nesta versão "
-                "do CocoParser."
-            )
+            try:
+                return decode_coco_rle(data)
+
+            except CocoRLEError as error:
+                raise CocoParserError(
+                    f"Segmentação RLE COCO inválida: {error}"
+                ) from error
 
         if not isinstance(data, list):
             raise CocoParserError(

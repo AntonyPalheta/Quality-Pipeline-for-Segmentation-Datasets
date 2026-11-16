@@ -1,5 +1,4 @@
 
-
 """
 Este módulo contém os testes automatizados do CocoParser.
 
@@ -21,6 +20,7 @@ from quality_pipeline.models import (
     Annotation,
     BoundingBox,
     Dataset,
+    MaskSegmentation,
     PolygonSegmentation,
 )
 from quality_pipeline.parsers import (
@@ -453,7 +453,6 @@ def test_coco_parser_rejects_invalid_annotation_identifier(tmp_path):
 @pytest.mark.parametrize(
     "segmentation",
     [
-        {"counts": [10, 5], "size": [480, 640]},
         [[0, 0, 10, 10]],
         [[0, 0, 10, 10, 5]],
         [[0, 0, float("nan"), 10, 5, 5]],
@@ -599,4 +598,74 @@ def test_coco_parser_rejects_image_path_outside_configured_root(tmp_path):
 
     with pytest.raises(CocoParserError):
         parser.parse()
+
+
+def test_coco_parser_converts_uncompressed_rle(tmp_path):
+    """
+    Verifica se o CocoParser converte RLE não comprimido do COCO
+    para o modelo interno MaskSegmentation.
+    """
+    payload = _minimal_coco_payload()
+
+    payload["images"][0]["width"] = 3
+    payload["images"][0]["height"] = 2
+
+    payload["annotations"] = [
+        {
+            "id": 201,
+            "image_id": 1,
+            "category_id": 3,
+            "segmentation": {
+                "size": [2, 3],
+                "counts": [2, 1, 1, 2],
+            },
+            "iscrowd": 1,
+        }
+    ]
+
+    annotation_file = _write_coco_json(tmp_path, payload)
+
+    parser = CocoParser(annotation_file=annotation_file)
+    dataset = parser.parse()
+
+    annotation = dataset.annotations[0]
+
+    assert isinstance(annotation.segmentation, MaskSegmentation)
+    assert annotation.segmentation.width == 3
+    assert annotation.segmentation.height == 2
+    assert annotation.segmentation.runs == (1, 2, 2, 1)
+    assert annotation.is_crowd is True
+
+
+def test_coco_parser_converts_compressed_rle(tmp_path):
+    """
+    Verifica se o CocoParser converte RLE comprimido do COCO
+    para o modelo interno MaskSegmentation.
+    """
+    payload = _minimal_coco_payload()
+
+    payload["images"][0]["width"] = 3
+    payload["images"][0]["height"] = 2
+
+    payload["annotations"] = [
+        {
+            "id": 202,
+            "image_id": 1,
+            "category_id": 3,
+            "segmentation": {
+                "size": [2, 3],
+                "counts": "032N",
+            },
+        }
+    ]
+
+    annotation_file = _write_coco_json(tmp_path, payload)
+
+    parser = CocoParser(annotation_file=annotation_file)
+    dataset = parser.parse()
+
+    annotation = dataset.annotations[0]
+
+    assert isinstance(annotation.segmentation, MaskSegmentation)
+    assert annotation.segmentation.runs == (0, 2, 1, 1, 1, 1)
 
